@@ -1,0 +1,23 @@
+{
+  "name": "Ask harness",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspaces/ask-harness",
+  "forwardPorts": [3000],
+  "portsAttributes": {
+    "3000": { "label": "Ask app", "onAutoForward": "openBrowser" }
+  },
+  "secrets": {
+    "OPENROUTER_API_KEY": {
+      "description": "Your OpenRouter API key, from https://openrouter.ai/keys",
+      "documentationUrl": "https://openrouter.ai/keys"
+    }
+  },
+  "postCreateCommand": "bash .devcontainer/setup.sh",
+  "postAttachCommand": "npm run dev",
+  "customizations": {
+    "vscode": {
+      "extensions": ["Prisma.prisma", "dbaeumer.vscode-eslint"]
+    }
+  }
+}

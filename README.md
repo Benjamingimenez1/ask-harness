@@ -32,7 +32,9 @@ final reply ──► TurnTrace (tools, memories, tokens, cost, unbacked-claim c
 
 ## Run it
 
-Requirements: Node 20+, PostgreSQL 14+.
+**In the browser, nothing to install:** on GitHub, click **Code → Codespaces → Create codespace on main**. The dev container starts Postgres, installs dependencies, migrates, seeds demo data and opens the app on port 3000. Add your OpenRouter key when GitHub asks for the `OPENROUTER_API_KEY` secret (or later in `.env`).
+
+**Locally:** requires Node 20+ and PostgreSQL 14+.
 
 ```bash
 cp .env.example .env            # add OPENROUTER_API_KEY, check DATABASE_URL
