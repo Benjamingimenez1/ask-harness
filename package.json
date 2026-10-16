@@ -1,0 +1,38 @@
+{
+  "name": "ask-harness",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A small, testable chat harness for an AI work assistant: versioned prompts, scoped memory, retrieval, safe tool execution and evals.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "db:migrate": "prisma migrate deploy",
+    "postinstall": "prisma generate",
+    "db:seed": "tsx prisma/seed.ts",
+    "test": "vitest run",
+    "eval": "tsx evals/run.ts",
+    "eval:offline": "tsx evals/run.ts --offline"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^6.19.3",
+    "@prisma/client": "^6.19.3",
+    "next": "^15.5.28",
+    "pg": "^8.23.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "@types/pg": "^8.23.1",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "prisma": "^6.19.3",
+    "tsx": "^4.23.15",
+    "typescript": "5.9",
+    "vitest": "^5.0.5"
+  }
+}

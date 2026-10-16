@@ -1,0 +1,182 @@
+generator client {
+  provider        = "prisma-client-js"
+  engineType      = "client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(cuid())
+  name          String
+  timezone      String         @default("UTC")
+  conversations Conversation[]
+  memories      Memory[]
+  tasks         Task[]
+  notes         Note[]
+  goals         Goal[]
+  toolRuns      ToolExecution[]
+  createdAt     DateTime       @default(now())
+}
+
+model Conversation {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Rolling summary of messages that no longer fit in the context window.
+  summary   String?
+  // Messages with seq <= this value are covered by `summary`.
+  summarizedThroughSeq Int?
+  messages  Message[]
+  traces    TurnTrace[]
+  memories  Memory[]
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+enum Role {
+  user
+  assistant
+  tool
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  // Total order of messages. Timestamps can tie within a millisecond.
+  seq            Int          @default(autoincrement())
+  // Client-generated id on user messages, so a retried request resumes the
+  // same turn instead of starting a new one (and re-running its actions).
+  requestId      String?      @unique
+  role           Role
+  content        String
+  // For assistant messages that requested tools (OpenAI-compatible shape).
+  toolCalls      Json?
+  // For tool result messages.
+  toolCallId     String?
+  toolName       String?
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId, seq])
+}
+
+enum MemoryScope {
+  USER         // lasting: applies to every conversation
+  CONVERSATION // temporary: applies only to the conversation it came from
+}
+
+enum MemoryStatus {
+  ACTIVE
+  SUPERSEDED // replaced by a newer memory with the same key
+  DELETED    // user asked to forget; content is wiped
+}
+
+model Memory {
+  id             String        @id @default(cuid())
+  userId         String
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scope          MemoryScope
+  conversationId String?
+  conversation   Conversation? @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  // Normalized topic, e.g. "reply_language". One ACTIVE memory per (user, scope, key).
+  key            String
+  content        String
+  status         MemoryStatus  @default(ACTIVE)
+  supersededById String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([userId, status])
+}
+
+enum TaskStatus {
+  OPEN
+  DONE
+}
+
+model Task {
+  id        String     @id @default(cuid())
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  status    TaskStatus @default(OPEN)
+  dueDate   DateTime?
+  goalId    String?
+  goal      Goal?      @relation(fields: [goalId], references: [id], onDelete: SetNull)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([userId, status, dueDate])
+}
+
+model Goal {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title      String
+  targetDate DateTime?
+  tasks      Task[]
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model Note {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+enum ToolRunStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+}
+
+// One row per side-effecting tool call. The unique idempotency key is what
+// stops a retried request or a repeated model call from doing the work twice.
+model ToolExecution {
+  id             String        @id @default(cuid())
+  userId         String
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  idempotencyKey String        @unique
+  toolName       String
+  input          Json
+  status         ToolRunStatus @default(PENDING)
+  result         Json?
+  error          String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+}
+
+// What the harness actually did on each turn, so a bad answer can be traced.
+model TurnTrace {
+  id               String       @id @default(cuid())
+  conversationId   String
+  conversation     Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userMessageId    String
+  promptVersion    String
+  model            String
+  contextTokens    Int
+  includedMemoryIds String[]
+  droppedMessageCount Int
+  toolCalls        Json
+  unbackedClaims   String[]
+  inputTokens      Int?
+  outputTokens     Int?
+  costUsd          Float?
+  latencyMs        Int
+  error            String?
+  createdAt        DateTime     @default(now())
+
+  @@index([conversationId, createdAt])
+}
